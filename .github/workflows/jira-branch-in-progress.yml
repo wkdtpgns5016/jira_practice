@@ -8,7 +8,25 @@ jobs:
     if: github.event.ref_type == 'branch' && github.event.ref != 'main' && github.event.ref != 'master'
     runs-on: ubuntu-latest
     steps:
-      # 1. Jira 로그인 (config.yml 생성 필수 단계)
+      # 1. 브랜치명(예: KAN-9-Feature-login-API 또는 feature/KAN-9)에서 pure Jira 키(KAN-9)만 추출
+      - name: Parse Jira Issue Key from Branch Name
+        id: parse_jira_key
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branchName = context.payload.ref || '';
+            
+            // 모든 지라 키 패턴(대문자 알파벳 + '-' + 숫자) 파싱
+            const match = branchName.match(/[A-Z]+-\d+/);
+            
+            if (match) {
+              console.log(`Found Jira Key from branch: ${match[0]}`);
+              core.setOutput('jira_key', match[0]);
+            } else {
+              core.setFailed(`브랜치명 '${branchName}'에서 Jira 키(예: KAN-9)를 찾을 수 없습니다.`);
+            }
+
+      # 2. Jira 로그인
       - name: Jira Login
         uses: atlassian/gajira-login@v3
         env:
@@ -16,9 +34,9 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      # 2. 브랜치명(예: KAN-7-feature)에서 Jira 키 추출 및 상태 변경
+      # 3. 추출한 Jira 키(KAN-9)만 전달하여 상태 변경
       - name: Move Jira Issue to In Progress
         uses: atlassian/gajira-transition@v3
         with:
-          issue: ${{ github.event.ref }}
-          transition: '진행 중' # 지라의 실제 '진행 중' 컬럼/상태 이름
+          issue: ${{ steps.parse_jira_key.outputs.jira_key }}
+          transition: '진행 중' # Jira의 실제 '진행 중' 컬럼/상태 이름
