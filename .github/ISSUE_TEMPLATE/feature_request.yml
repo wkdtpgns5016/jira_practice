@@ -35,11 +35,12 @@ body:
     attributes:
       label: "우선순위"
       options:
+	  	- Lowest
         - Low
         - Medium
         - High
-        - Critical
-      default: 1
+        - Highest
+      default: 2
     validations:
       required: true
 

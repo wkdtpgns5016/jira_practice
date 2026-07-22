@@ -63,3 +63,17 @@ body:
       placeholder: "이미지를 여기에 드래그 앤 드롭하거나 에러 텍스트를 붙여넣으세요."
     validations:
       required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "우선순위"
+      options:
+        - Highest
+        - High
+        - Medium
+        - Low
+        - Lowest
+      default: 2 # (Medium이 기본값)
+    validations:
+      required: true
