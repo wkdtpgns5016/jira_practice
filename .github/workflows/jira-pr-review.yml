@@ -8,7 +8,25 @@ jobs:
   move-jira-to-review:
     runs-on: ubuntu-latest
     steps:
-      # 1. Jira 로그인 (config.yml 인증 파일 생성 필수 단계)
+      # 1. PR 출발지 브랜치명(head.ref)에서 pure Jira 키(예: KAN-9)만 추출
+      - name: Parse Jira Issue Key from Branch
+        id: parse_jira_key
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const branchName = context.payload.pull_request.head.ref || '';
+            
+            // 브랜치명에서 KAN-9 형태 정규식 추출
+            const match = branchName.match(/([A-Z]+-\d+)/);
+            
+            if (match && match[1]) {
+              console.log(`Found Jira Key: ${match[1]}`);
+              core.setOutput('jira_key', match[1]);
+            } else {
+              core.setFailed(`브랜치명 '${branchName}'에서 Jira 키를 찾을 수 없습니다.`);
+            }
+
+      # 2. Jira 로그인
       - name: Jira Login
         uses: atlassian/gajira-login@v3
         env:
@@ -16,11 +34,9 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      # 2. PR 브랜치명/제목에서 Jira 키(예: KAN-7)를 찾아 상태 변경
+      # 3. 추출한 Jira 키(KAN-9)만 전달하여 상태 변경
       - name: Move Jira Issue to In Review
         uses: atlassian/gajira-transition@v3
         with:
-          # PR이 생성된 브랜치 이름(head.ref)에서 Jira 이슈 키 자동 추출
-          issue: ${{ github.event.pull_request.head.ref }}
-          # Jira 프로젝트의 실제 검토 단계 이름 (예: '검토 중' 또는 'In Review')
+          issue: ${{ steps.parse_jira_key.outputs.jira_key }}
           transition: '검토 중'
