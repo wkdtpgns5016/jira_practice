@@ -1,0 +1,45 @@
+name: Sync GitHub Issue to Jira
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  create-jira-issue:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Jira 로그인
+      - name: Jira Login
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      # 2. Jira 이슈 생성
+      - name: Create Jira Issue
+        id: create_jira
+        uses: atlassian/gajira-create@v3
+        with:
+          project: KAN # ⚠️ 본인의 Jira 프로젝트 키(예: KAN, PROJ 등)로 변경하세요!
+          issuetype: Task
+          summary: '${{ github.event.issue.title }}'
+          description: |
+            *GitHub Issue 내용:*
+            ${{ github.event.issue.body }}
+
+            ---
+            🔗 *GitHub Issue 바로가기:* ${{ github.event.issue.html_url }}
+            👤 *작성자:* @${{ github.event.issue.user.login }}
+
+      # 3. (선택사항) 생성된 Jira 이슈 번호를 GitHub Issue 댓글에 남기기
+      - name: Comment Jira Key on GitHub Issue
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🎉 Jira 이슈가 자동으로 생성되었습니다: **${{ steps.create_jira.outputs.issue }}**`
+            })
