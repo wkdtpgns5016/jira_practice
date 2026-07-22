@@ -2,19 +2,25 @@ name: Move Jira Issue to Done on GitHub Issue Close
 
 on:
   issues:
-    types: [closed] # GitHub 이슈가 closed 상태가 되었을 때 실행
+    types: [closed]
 
 jobs:
   move-jira-to-done:
     runs-on: ubuntu-latest
     steps:
-      - name: Jira 이슈 상태를 '완료'로 변경
+      # 1. Jira 로그인 (필수! config.yml 생성 단계)
+      - name: Jira Login
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      # 2. Jira 이슈 상태 변경
+      - name: Move Jira Issue to Done
         uses: atlassian/gajira-transition@v3
         with:
-          jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
-          jira-base-url: ${{ secrets.JIRA_BASE_URL }}
-          # GitHub 이슈의 본문(body) 또는 제목(title)에서 KAN-123 형태의 Jira 키 탐지
-          # 만약 이슈 생성 시 본문에 Jira 링크나 키를 남기지 않았다면, title이나 body를 참조하도록 설정합니다.
+          # GitHub 이슈 본문(body)에서 Jira 키(예: KAN-7) 자동 탐지
           issue: ${{ github.event.issue.body }}
-          # Jira 프로젝트의 실제 완료 상태 이름 (예: '완료', 'Done')
+          # 지라의 실제 완료 컬럼/상태 이름
           transition: '완료'
