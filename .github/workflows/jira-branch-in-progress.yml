@@ -1,0 +1,20 @@
+name: Move Jira Issue to In Progress on Branch Creation
+
+on:
+  create: # 새로운 브랜치나 태그가 생성될 때 실행
+
+jobs:
+  move-to-in-progress:
+    # 브랜치가 생성되었을 때만 실행 (태그 생성 제외 & main/master 브랜치 제외)
+    if: github.event.ref_type == 'branch' && github.event.ref != 'main' && github.event.ref != 'master'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Jira 이슈 상태를 '진행 중'으로 변경
+        uses: atlassian/gajira-transition@v3
+        with:
+          jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
+          jira-base-url: ${{ secrets.JIRA_BASE_URL }}
+          # 생성된 브랜치 이름(예: KAN-3-Feature-test)에서 KAN-3 이슈 키 추출
+          issue: ${{ github.event.ref }}
+          # Jira 프로젝트에 설정된 실제 '진행 중' 상태 이름
+          transition: '진행 중'

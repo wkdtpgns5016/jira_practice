@@ -1,0 +1,19 @@
+name: Move Jira Issue to In Review
+
+on:
+  pull_request:
+    types: [opened, reopened] # PR이 새로 열리거나 다시 열릴 때 실행
+
+jobs:
+  move-jira-status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Jira Issue Key 추출 및 상태 변경
+        uses: atlassian/gajira-transition@v3
+        with:
+          jira-api-token: ${{ secrets.JIRA_API_TOKEN }}
+          jira-base-url: ${{ secrets.JIRA_BASE_URL }}
+          # PR 제목이나 브랜치 이름에서 KAN-123 형태의 이슈 키를 자동으로 찾아냅니다.
+          issue: ${{ github.event.pull_request.head.ref }} 
+          # Jira 프로젝트의 실제 '검토' 단계 상태 이름 (예: '검토 중', 'In Review')
+          transition: '검토 중'
