@@ -1,66 +1,54 @@
-name: Sync GitHub Issue to Jira
+name: "✨ 기능 요청 (Feature Request)"
+description: "새로운 기능이나 작업 항목을 등록합니다."
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 📌 GitHub Issue 작성 양식
+        작성된 내용은 Jira 이슈로 자동 등록됩니다. 필요한 정보를 명확히 작성해 주세요!
 
-on:
-  issues:
-    types: [opened]
+  - type: textarea
+    id: description
+    attributes:
+      label: "작업 개요"
+      description: "어떤 작업이 필요한지 구체적으로 적어주세요."
+      placeholder: "예: 로그인 페이지에 소셜 로그인(구글, 카카오) 버튼을 추가합니다."
+    validations:
+      required: true
 
-permissions:
-  issues: write
-  contents: read
+  - type: textarea
+    id: tasks
+    attributes:
+      label: "세부 작업 목록 (Checklist)"
+      description: "진행할 세부 항목들을 체크리스트 형태로 적어주세요."
+      placeholder: |
+        - [ ] 카카오 API 연동
+        - [ ] 구글 API 연동
+        - [ ] 로그인 성공 테스트
+    validations:
+      required: false
 
-jobs:
-  create-jira-issue:
-    runs-on: ubuntu-latest
-    steps:
-      # 1. Issue Form 본문에서 선택된 우선순위 텍스트 바로 추출
-      - name: Parse Priority from Issue Body
-        id: parse_priority
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const body = context.payload.issue.body || '';
-            
-            // 본문에서 Highest, High, Medium, Low, Lowest 중 선택된 값 찾기
-            const match = body.match(/(Highest|High|Medium|Low|Lowest)/i);
-            const priority = match ? match[0] : 'Medium'; // 못 찾으면 기본값 Medium
-            
-            // 첫 글자만 대문자로 정형화 (예: high -> High)
-            const formattedPriority = priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
-            core.setOutput('jira_priority', formattedPriority);
+  - type: dropdown
+    id: priority
+    attributes:
+      label: "우선순위"
+      options:
+        - "Highest"
+        - "High"
+        - "Medium"
+        - "Low"
+        - "Lowest"
+      default: 2
+    validations:
+      required: true
 
-      # 2. Jira 로그인
-      - name: Jira Login
-        uses: atlassian/gajira-login@v3
-        env:
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-
-      # 3. Jira 이슈 생성 (추출한 우선순위 전달)
-      - name: Create Jira Issue
-        id: create_jira
-        uses: atlassian/gajira-create@v3
-        with:
-          project: KAN
-          issuetype: 작업
-          summary: '${{ github.event.issue.title }}'
-          description: |
-            *GitHub Issue 내용:*
-            ${{ github.event.issue.body }}
-
-            ---
-            🔗 *GitHub Issue 바로가기:* ${{ github.event.issue.html_url }}
-            👤 *작성자:* @${{ github.event.issue.user.login }}
-          fields: '{"priority": {"name": "${{ steps.parse_priority.outputs.jira_priority }}"}}'
-
-      # 4. 완료 댓글 작성
-      - name: Comment Jira Key
-        uses: actions/github-script@v6
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🎉 Jira 이슈가 자동으로 생성되었습니다: **${{ steps.create_jira.outputs.issue }}**`
-            })
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: "참고 사항 및 참고 링크"
+      description: "디자인 시안(Figma), API 명세서, 기타 참고할 링크가 있다면 첨부해 주세요."
+      placeholder: "https://figma.com/..."
+    validations:
+      required: false
