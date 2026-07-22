@@ -4,11 +4,31 @@ on:
   issues:
     types: [opened]
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   create-jira-issue:
     runs-on: ubuntu-latest
     steps:
-      # 1. Jira 로그인
+      # 1. Issue Form 본문에서 선택된 우선순위 텍스트 바로 추출
+      - name: Parse Priority from Issue Body
+        id: parse_priority
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const body = context.payload.issue.body || '';
+            
+            // 본문에서 Highest, High, Medium, Low, Lowest 중 선택된 값 찾기
+            const match = body.match(/(Highest|High|Medium|Low|Lowest)/i);
+            const priority = match ? match[0] : 'Medium'; // 못 찾으면 기본값 Medium
+            
+            // 첫 글자만 대문자로 정형화 (예: high -> High)
+            const formattedPriority = priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase();
+            core.setOutput('jira_priority', formattedPriority);
+
+      # 2. Jira 로그인
       - name: Jira Login
         uses: atlassian/gajira-login@v3
         env:
@@ -16,13 +36,13 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      # 2. Jira 이슈 생성
+      # 3. Jira 이슈 생성 (추출한 우선순위 전달)
       - name: Create Jira Issue
         id: create_jira
         uses: atlassian/gajira-create@v3
         with:
-          project: KAN # ⚠️ 본인의 Jira 프로젝트 키(예: KAN, PROJ 등)로 변경하세요!
-          issuetype: 작업 # 한국어 타입으로 지정
+          project: KAN
+          issuetype: 작업
           summary: '${{ github.event.issue.title }}'
           description: |
             *GitHub Issue 내용:*
@@ -31,9 +51,10 @@ jobs:
             ---
             🔗 *GitHub Issue 바로가기:* ${{ github.event.issue.html_url }}
             👤 *작성자:* @${{ github.event.issue.user.login }}
+          fields: '{"priority": {"name": "${{ steps.parse_priority.outputs.jira_priority }}"}}'
 
-      # 3. (선택사항) 생성된 Jira 이슈 번호를 GitHub Issue 댓글에 남기기
-      - name: Comment Jira Key on GitHub Issue
+      # 4. 완료 댓글 작성
+      - name: Comment Jira Key
         uses: actions/github-script@v6
         with:
           script: |
