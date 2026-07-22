@@ -22,7 +22,7 @@ jobs:
         uses: atlassian/gajira-create@v3
         with:
           project: KAN # ⚠️ 본인의 Jira 프로젝트 키(예: KAN, PROJ 등)로 변경하세요!
-          issuetype: Task
+          issuetype: 작업 # 한국어 타입으로 지정
           summary: '${{ github.event.issue.title }}'
           description: |
             *GitHub Issue 내용:*
