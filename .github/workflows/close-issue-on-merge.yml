@@ -1,0 +1,18 @@
+name: Close Linked Issue on Non-Main Branch Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  close-issue:
+    # PR이 '머지(merged)'되었고, 타겟 브랜치가 'develop'일 때만 실행 (원하는 브랜치명으로 변경 가능)
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR 본문에서 이슈 번호 추출 및 Close 처리
+        uses: peter-evans/close-issue@v3
+        with:
+          # PR 본문(body)에 있는 Closes #이슈번호 또는 Fixes #이슈번호 패턴 탐지
+          comment: |
+            PR #${{ github.event.pull_request.number }}가 ${{ github.event.pull_request.base.ref }} 브랜치로 머지되어 자동으로 종료되었습니다.
