@@ -1,0 +1,56 @@
+name: Auto Link Issue by Jira Key
+
+on:
+  pull_request:
+    types: [opened]
+
+jobs:
+  auto-link:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: read
+    steps:
+      - name: Find Github Issue by Jira Key & Update PR Body
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const branchName = pr.head.ref || '';
+
+            // 1. 브랜치명에서 Jira Key 추출 (예: KAN-9)
+            const jiraMatch = branchName.match(/([A-Z]+-\d+)/);
+            if (!jiraMatch) {
+              console.log('브랜치명에서 Jira Key를 찾지 못했습니다.');
+              return;
+            }
+            const jiraKey = jiraMatch[1]; // "KAN-9"
+
+            // 2. 레포지토리 내 이슈 중 'KAN-9'가 언급된 이슈 검색
+            const searchQuery = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open ${jiraKey}`;
+            const searchResult = await github.rest.search.issuesAndPullRequests({
+              q: searchQuery
+            });
+
+            let closeKeyword = '';
+            if (searchResult.data.items.length > 0) {
+              // 찾은 GitHub 이슈 번호 가져오기 (예: #15)
+              const matchedIssueNumber = searchResult.data.items[0].number;
+              closeKeyword = `closed #${matchedIssueNumber} (Jira: ${jiraKey})`;
+              console.log(`Jira Key [${jiraKey}]에 해당하는 GitHub Issue #${matchedIssueNumber} 발견!`);
+            } else {
+              // 검색 실패 시 지라 키만 기록
+              closeKeyword = `Jira Key: ${jiraKey}`;
+              console.log(`Jira Key [${jiraKey}]에 해당하는 GitHub Issue를 찾지 못함.`);
+            }
+
+            // 3. PR 본문 업데이트
+            let currentBody = pr.body || '';
+            const updatedBody = `## 📌 관련 이슈\n* ${closeKeyword}\n\n${currentBody}`;
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_request_number: pr.number,
+              body: updatedBody
+            });
