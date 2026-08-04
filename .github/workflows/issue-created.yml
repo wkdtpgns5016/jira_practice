@@ -374,8 +374,7 @@ ${jiraUrl}`
 
               issue_number:issueNumber,
 
-              body:
-`✅ Jira Task Created
+              body: `✅ Jira Task Created
 
 ${jiraKey}
 
