@@ -351,11 +351,9 @@ jobs:
 
               issue_number:issueNumber,
 
-              title:
-                `[${jiraKey}] ${issueTitle}`,
+              title: `[${jiraKey}] ${issueTitle}`,
 
-              body:
-`${issueBody}
+              body: `${issueBody}
 
 ---
 
