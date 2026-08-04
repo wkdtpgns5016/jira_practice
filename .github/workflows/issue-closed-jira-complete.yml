@@ -8,30 +8,16 @@ jobs:
   sync-jira:
     runs-on: ubuntu-latest
     steps:
-      # 1. PR 머지에 의해 닫힌 이슈인지 먼저 검증 (단순 닫힘이면 여기서 바로 종료)
-      - name: Check if Closed by PR
-        id: check_pr
-        run: |
-          HAS_PR="${{ github.event.issue.pull_request != null }}"
-
-          if [ "$HAS_PR" = "true" ]; then
-            echo "PR 머지에 의해 닫힌 이슈입니다. 지라 업데이트를 진행합니다."
-            echo "is_pr_closed=true" >> $GITHUB_OUTPUT
-          else
-            echo "스크럼 미팅 등 지라와 관련 없는 단순 이슈 닫힘입니다. (Skip)"
-            echo "is_pr_closed=false" >> $GITHUB_OUTPUT
-          fi
-
-      # 2. PR로 닫힌 경우에만 제목에서 지라 키 추출 ([DEV-16] 패턴)
+      # 1. 이슈 제목에서 [DEV-16] 형태의 지라 키 추출
       - name: Extract Jira Key
         id: extract_key
-        if: steps.check_pr.outputs.is_pr_closed == 'true'
         run: |
           ISSUE_TITLE="${{ github.event.issue.title }}"
+          # [DEV-16] 패턴에서 지라 키 추출
           JIRA_KEY=$(echo "$ISSUE_TITLE" | grep -oE '[A-Z0-9]+-[0-9]+' | head -n 1)
 
           if [ -z "$JIRA_KEY" ]; then
-            echo "::warning::PR로 닫혔으나 제목에서 Jira Issue Key를 찾을 수 없습니다."
+            echo "지라 키가 없는 이슈입니다. (스크럼 미팅 등 단순 이슈 -> Skip)"
             echo "has_key=false" >> $GITHUB_OUTPUT
           else
             echo "Found Jira Key: $JIRA_KEY"
@@ -39,7 +25,7 @@ jobs:
             echo "has_key=true" >> $GITHUB_OUTPUT
           fi
 
-      # 3. Jira 로그인
+      # 2. 지라 키가 존재하는 경우에만 로그인
       - name: Login to Jira
         if: steps.extract_key.outputs.has_key == 'true'
         uses: atlassian/gajira-login@v3
@@ -48,10 +34,10 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      # 4. Jira 이슈 상태를 '완료'로 변경
+      # 3. 지라 이슈 상태를 '완료'로 변경
       - name: Transition Jira Issue to 'Done'
         if: steps.extract_key.outputs.has_key == 'true'
         uses: atlassian/gajira-transition@v3
         with:
           issue: ${{ steps.extract_key.outputs.jira_key }}
-          transition: "완료" # 지라 컬럼명이 영문이면 "Done"으로 변경
+          transition: "완료" # 지라 컬럼명이 영문이면 "Done"으로 수정
