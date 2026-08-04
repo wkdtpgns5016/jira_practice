@@ -374,10 +374,11 @@ ${jiraUrl}`
 
               issue_number:issueNumber,
 
-              body: `✅ Jira Task Created
-
-${jiraKey}
-
-${jiraUrl}`
-
+              body: [
+                "✅ Jira Task Created",
+                "",
+                jirakey,
+                "",
+                jiraUrl
+              ].join("\n")
             });
