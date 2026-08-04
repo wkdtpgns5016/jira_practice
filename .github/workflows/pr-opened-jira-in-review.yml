@@ -27,13 +27,19 @@ jobs:
             echo "has_key=true" >> $GITHUB_OUTPUT
           fi
 
+      # 1. Jira 로그인 (config.yml 파일 자동 생성)
+      - name: Login to Jira
+        if: steps.extract_key.outputs.has_key == 'true'
+        uses: atlassian/gajira-login@v3
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+
+      # 2. Jira 이슈 상태 변경 ('In Review'로 이동)
       - name: Transition Jira Issue to 'In Review'
         if: steps.extract_key.outputs.has_key == 'true'
         uses: atlassian/gajira-transition@v3
         with:
           issue: ${{ steps.extract_key.outputs.jira_key }}
           transition: "In Review" # 사용 중인 Jira의 검토 중 상태 이름 (필요 시 수정)
-        env:
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
