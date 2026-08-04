@@ -8,14 +8,13 @@ jobs:
     if: github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
-      # 1. 브랜치명에서 지라 키 추출 ([DEV-16]-login 패턴 등)
+      # 1. 브랜치명에서 지라 키 추출
       - name: Extract Jira Key
         id: extract_key
         run: |
           BRANCH_NAME="${{ github.event.ref }}"
           echo "Created Branch: $BRANCH_NAME"
 
-          # 대괄호 유무와 상관없이 KAN-01, DEV-16 형태의 지라 키 추출
           JIRA_KEY=$(echo "$BRANCH_NAME" | grep -oE '[A-Z0-9]+-[0-9]+' | head -n 1)
 
           if [ -n "$JIRA_KEY" ]; then
@@ -36,7 +35,7 @@ jobs:
           JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
 
-      # 3. 백로그 영역에 있는 태스크를 보드 영역으로 이동 (필요 시)
+      # 3. 백로그 영역에 있는 태스크를 Board(보드) 영역으로 강제 이동
       - name: Move Backlog Issue to Board
         if: steps.extract_key.outputs.has_key == 'true'
         uses: actions/github-script@v7
@@ -45,20 +44,31 @@ jobs:
             const jiraKey = "${{ steps.extract_key.outputs.jira_key }}";
             const domain = process.env.JIRA_BASE_URL.replace(/\/$/, "");
             const authHeader = 'Basic ' + Buffer.from(`${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
+            const headers = { 'Authorization': authHeader, 'Content-Type': 'application/json' };
 
-            // Agile API 호출: Backlog 영역에서 Board 영역으로 이슈를 이동
             try {
-              const res = await fetch(`${domain}/rest/agile/1.0/backlog/issue/move`, {
-                method: 'POST',
-                headers: {
-                  'Authorization': authHeader,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ issues: [jiraKey] })
-              });
-              console.log(`Board move API Status: ${res.status}`);
+              // 1) 프로젝트의 보드 ID 자동 조회
+              const projectKey = jiraKey.split('-')[0];
+              const boardRes = await fetch(`${domain}/rest/agile/1.0/board?projectKeyOrId=${projectKey}`, { headers });
+              const boardData = await boardRes.json();
+
+              if (boardData.values && boardData.values.length > 0) {
+                const boardId = boardData.values[0].id;
+                console.log(`Found Board ID: ${boardId} for project ${projectKey}`);
+
+                // 2) 해당 보드(Board)로 이슈 이동 API 호출
+                const moveRes = await fetch(`${domain}/rest/agile/1.0/board/${boardId}/issue`, {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify({ issues: [jiraKey] })
+                });
+
+                console.log(`Board Move Response Status: ${moveRes.status}`);
+              } else {
+                console.log(`No board found for project ${projectKey}`);
+              }
             } catch (err) {
-              console.log(`Board move note: ${err.message}`);
+              console.log(`Error moving issue to board: ${err.message}`);
             }
         env:
           JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
