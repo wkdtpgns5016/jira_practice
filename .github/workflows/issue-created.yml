@@ -263,9 +263,8 @@ jobs:
             const jql =
               "project=" +
               process.env.PROJECT_KEY +
-              " AND issuetype=" +
-              process.env.JIRA_EPIC_TYPE_ID +
-              ' AND summary="' +
+              " AND issuetype=Epic" +
+              ' AND summary ~ "' +
               milestone +
               '"';
 
