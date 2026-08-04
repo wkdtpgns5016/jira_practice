@@ -39,6 +39,7 @@ jobs:
             const issueTitle=issue.title;
             const issueBody=issue.body ?? "";
             const milestone=issue.milestone?.title ?? null;
+            const milestoneDescription = issue.milestone?.description ?? "";
             const labels=issue.labels.map(
               l=>l.name.trim().toLowerCase()
             );
@@ -76,6 +77,17 @@ jobs:
 
             const jiraEnabled=getField("Jira Task 생성").toUpperCase();
             const priority=getField("Jira Priority");
+
+            const getEpicKey = () => {
+
+              const match =
+                milestoneDescription.match(
+                  /JIRA_EPIC_KEY\s*=\s*([A-Z]+-\d+)/
+                );
+
+              return match?.[1] ?? null;
+
+            };
 
             if(jiraEnabled!=="ON"){
               console.log("Jira Sync Disabled.");
@@ -122,6 +134,12 @@ jobs:
                   "Milestone is required."
                 );
               }
+
+              if(!getEpicKey()){
+                errors.push(
+                  "Milestone must contain JIRA_EPIC_KEY."
+                );
+              }
             };
 
             validateDuplicate();
@@ -158,9 +176,6 @@ jobs:
     if: needs.validate.outputs.jira_enabled == 'true'
     runs-on: ubuntu-latest
 
-    env:
-      JIRA_EPIC_TYPE_ID: 10001
-
     steps:
       - name: Create Jira Task
         uses: actions/github-script@v7
@@ -183,6 +198,7 @@ jobs:
             const issueBody = issue.body ?? "";
 
             const milestone = issue.milestone?.title;
+            const milestoneDescription = issue.milestone?.description ?? "";
             const labels = issue.labels.map(label => label.name);
 
 
@@ -268,32 +284,21 @@ jobs:
               milestone +
               '"';
 
-
-            const epicSearch =
-              await jiraRequest(
-                "/rest/api/3/search/jql?jql=" +
-                encodeURIComponent(jql)
+            const epicMatch =
+              milestoneDescription.match(
+                /JIRA_EPIC_KEY\s*=\s*([A-Z]+-\d+)/
               );
-
-
-            if(
-              !epicSearch.issues ||
-              epicSearch.issues.length === 0
-            ){
-
-              throw new Error(
-                "Epic '" +
-                milestone +
-                "' does not exist."
-              );
-
-            }
 
 
             const epicKey =
-              epicSearch.issues[0].key;
+              epicMatch?.[1];
 
 
+            if(!epicKey){
+              throw new Error(
+                "JIRA_EPIC_KEY is missing from milestone."
+              );
+            }
 
             /*
              * Jira Task 생성
