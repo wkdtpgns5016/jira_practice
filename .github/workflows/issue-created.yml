@@ -39,7 +39,9 @@ jobs:
             const issueTitle=issue.title;
             const issueBody=issue.body ?? "";
             const milestone=issue.milestone?.title ?? null;
-            const labels=issue.labels.map(l=>l.name);
+            const labels=issue.labels.map(
+              l=>l.name.trim().toLowerCase()
+            );
 
             if(labels.length!==1){
               throw new Error(
@@ -52,8 +54,12 @@ jobs:
             const errors=[];
 
             const CONFIG={
-              workTypes:process.env.ALLOWED_WORK_TYPES.split(","),
+              workTypes:process.env.ALLOWED_WORK_TYPES
+                .split(",")
+                .map(type=>type.trim().toLowerCase()),
+
               priorities:process.env.ALLOWED_PRIORITIES.split(","),
+
               projectKey:process.env.PROJECT_KEY
             };
 
