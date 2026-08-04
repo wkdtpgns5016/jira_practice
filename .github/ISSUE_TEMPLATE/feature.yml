@@ -2,8 +2,6 @@ name: Feature Request
 
 description: 새로운 기능 개발 요청
 
-title: ""
-
 labels:
   - Feature
 
@@ -17,14 +15,15 @@ body:
         새로운 기능 개발 요청입니다.
         Jira Task 생성 여부와 Priority를 선택해주세요.
 
+
   - type: dropdown
     id: jira-create
     attributes:
       label: Jira Task 생성
       description: Jira Task 자동 생성을 활성화할지 선택합니다.
       options:
-        - ON
-        - OFF
+        - "ON"
+        - "OFF"
     validations:
       required: true
 
