@@ -59,9 +59,12 @@ jobs:
 
             const getField=(name)=>{
               const regex=new RegExp(
-                `###\\s*${name}\\s*\\n([\\s\\S]*?)(?=\\n###|$)`,
+                "###\\s*" +
+                name +
+                "\\s*\\n([\\s\\S]*?)(?=\\n###|$)",
                 "i"
               );
+
               return issueBody.match(regex)?.[1]?.trim() ?? "";
             };
 
@@ -78,7 +81,9 @@ jobs:
 
             const validateDuplicate=()=>{
               if(/^\[[A-Z]+-\d+\]/.test(issueTitle)){
-                errors.push("This issue is already linked to Jira.");
+                errors.push(
+                  "This issue is already linked to Jira."
+                );
               }
             };
 
@@ -92,7 +97,7 @@ jobs:
 
               if(!CONFIG.workTypes.includes(labels[0])){
                 errors.push(
-                  `Unsupported Work Type: ${labels[0]}`
+                  "Unsupported Work Type: " + labels[0]
                 );
               }
             };
@@ -100,7 +105,7 @@ jobs:
             const validatePriority=()=>{
               if(!CONFIG.priorities.includes(priority)){
                 errors.push(
-                  `Unsupported Jira Priority: ${priority}`
+                  "Unsupported Jira Priority: " + priority
                 );
               }
             };
@@ -128,7 +133,7 @@ jobs:
               "",
               "다음 항목을 수정한 후 다시 실행하세요.",
               "",
-              ...errors.map(e=>`- ${e}`)
+              ...errors.map(e=>"- " + e)
             ].join("\n");
 
             await github.rest.issues.createComment({
@@ -177,7 +182,9 @@ jobs:
 
             const getField = (name) => {
               const regex = new RegExp(
-                `###\\s*${name}\\s*\\n([\\s\\S]*?)(?=\\n###|$)`,
+                "###\\s*" +
+                name +
+                "\\s*\\n([\\s\\S]*?)(?=\\n###|$)",
                 "i"
               );
 
@@ -207,7 +214,9 @@ jobs:
 
             const auth = Buffer
               .from(
-                `${process.env.JIRA_USER_EMAIL}:${process.env.JIRA_API_TOKEN}`
+                process.env.JIRA_USER_EMAIL +
+                ":" +
+                process.env.JIRA_API_TOKEN
               )
               .toString("base64");
 
@@ -215,11 +224,11 @@ jobs:
             const jiraRequest = async(path, options = {}) => {
 
               const response = await fetch(
-                `${process.env.JIRA_BASE_URL}${path}`,
+                process.env.JIRA_BASE_URL + path,
                 {
                   ...options,
                   headers:{
-                    Authorization:`Basic ${auth}`,
+                    Authorization:"Basic " + auth,
                     Accept:"application/json",
                     "Content-Type":"application/json"
                   }
@@ -245,11 +254,20 @@ jobs:
              * Milestone 제목과 동일한 Epic 검색
              */
 
+            const jql =
+              "project=" +
+              process.env.PROJECT_KEY +
+              " AND issuetype=" +
+              process.env.JIRA_EPIC_TYPE_ID +
+              ' AND summary="' +
+              milestone +
+              '"';
+
+
             const epicSearch =
               await jiraRequest(
-                `/rest/api/3/search/jql?jql=${encodeURIComponent(
-                  `project=${process.env.PROJECT_KEY} AND issuetype=${process.env.JIRA_EPIC_TYPE_ID} AND summary="${milestone}"`
-                )}`
+                "/rest/api/3/search/jql?jql=" +
+                encodeURIComponent(jql)
               );
 
 
@@ -259,7 +277,9 @@ jobs:
             ){
 
               throw new Error(
-                `Epic '${milestone}' does not exist.`
+                "Epic '" +
+                milestone +
+                "' does not exist."
               );
 
             }
@@ -336,7 +356,9 @@ jobs:
 
 
             const jiraUrl =
-              `${process.env.JIRA_BASE_URL}/browse/${jiraKey}`;
+              process.env.JIRA_BASE_URL +
+              "/browse/" +
+              jiraKey;
 
 
 
@@ -351,18 +373,23 @@ jobs:
 
               issue_number:issueNumber,
 
-              title: `[${jiraKey}] ${issueTitle}`,
+              title:
+                "[" +
+                jiraKey +
+                "] " +
+                issueTitle,
 
-              body: `${issueBody}
-
----
-
-## Jira Task
-
-${jiraKey}
-
-${jiraUrl}`
-
+              body: [
+                issueBody,
+                "",
+                "---",
+                "",
+                "## Jira Task",
+                "",
+                jiraKey,
+                "",
+                jiraUrl
+              ].join("\n")
             });
 
 
@@ -377,7 +404,7 @@ ${jiraUrl}`
               body: [
                 "✅ Jira Task Created",
                 "",
-                jirakey,
+                jiraKey,
                 "",
                 jiraUrl
               ].join("\n")
