@@ -398,6 +398,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add Meeting-Notes/
+          git add Meeting-Notes.md
 
           if git diff --cached --quiet; then
             echo "No changes to commit."
