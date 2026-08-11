@@ -301,6 +301,12 @@ jobs:
 
           slug = slugify(issue_title)
 
+          # 실제 회의록 파일명
+          filename = f"{issue_number}-{slug}.md"
+
+          # Meeting Notes Index 경로
+          index_path = "wiki/Meeting-Notes.md"
+
           # --------------------------------------------------
           # 새로운 회의 링크
           # --------------------------------------------------
