@@ -299,7 +299,7 @@ jobs:
 
               return text
 
-          slug = slugify(title)
+          slug = slugify(issue_title)
 
           # --------------------------------------------------
           # 새로운 회의 링크
