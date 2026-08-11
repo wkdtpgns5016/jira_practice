@@ -289,7 +289,7 @@ jobs:
           import re
 
           issue_number = int(os.environ["ISSUE_NUMBER"])
-          title = os.environ["ISSUE_TITLE"]
+          issue_title = os.environ["ISSUE_TITLE"]
 
           def slugify(text):
               text = text.strip()
