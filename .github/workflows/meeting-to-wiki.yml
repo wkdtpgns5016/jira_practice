@@ -45,6 +45,7 @@ jobs:
         if: steps.check-meeting.outputs.is_meeting == 'true'
         env:
           WIKI_PAT: ${{ secrets.WIKI_PAT }}
+          REPOSITORY: Team-likelion-2nd-Project/likelion-devops-7th-team04
         run: |
           git clone \
             "https://x-access-token:${WIKI_PAT}@github.com/${REPOSITORY}.wiki.git" \
