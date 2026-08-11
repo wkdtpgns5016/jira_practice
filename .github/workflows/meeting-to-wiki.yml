@@ -13,6 +13,9 @@ jobs:
     name: Create Meeting Note
     runs-on: ubuntu-latest
 
+    env:
+      REPOSITORY: Team-likelion-2nd-Project/likelion-devops-7th-team04
+
     steps:
       # --------------------------------------------------
       # 1. meeting label 확인
@@ -45,7 +48,6 @@ jobs:
         if: steps.check-meeting.outputs.is_meeting == 'true'
         env:
           WIKI_PAT: ${{ secrets.WIKI_PAT }}
-          REPOSITORY: Team-likelion-2nd-Project/likelion-devops-7th-team04
         run: |
           git clone \
             "https://x-access-token:${WIKI_PAT}@github.com/${REPOSITORY}.wiki.git" \
@@ -58,7 +60,6 @@ jobs:
         if: steps.check-meeting.outputs.is_meeting == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY: Team-likelion-2nd-Project/likelion-devops-7th-team04
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.issue.body }}
@@ -300,7 +301,14 @@ jobs:
 
           slug = slugify(title)
 
-          index_path = "wiki/Meeting-Notes.md"
+          # --------------------------------------------------
+          # 새로운 회의 링크
+          # --------------------------------------------------
+
+          new_link = (
+              f"- [#{issue_number} {issue_title}]"
+              f"(Meeting-Notes/{filename[:-3]})"
+          )
 
           if os.path.exists(index_path):
               with open(index_path, "r", encoding="utf-8") as file:
@@ -310,63 +318,62 @@ jobs:
 
           # 기존 링크 추출
           pattern = r"- \[#(\d+) .*?\]\(Meeting-Notes/.*?\)"
-
-          existing = re.findall(pattern, content)
-
-          link = (
-              f"- [#{issue_number} {title}]"
-              f"(Meeting-Notes/{issue_number}-{slug})"
+          meeting_pattern = re.compile(
+              r"^- \[#(\d+) (.*?)\]\(Meeting-Notes/(.*?)\)$",
+              re.MULTILINE
           )
+          
+          meetings = {}
 
-          # 중복 방지
-          if f"#{issue_number} " not in content:
-              content += "\n" + link + "\n"
+          for match in meeting_pattern.finditer(content):
+              number = int(match.group(1))
+              line = match.group(0)
+              meetings[number] = line
 
+          meetings[issue_number] = new_link
+          
           # --------------------------------------------------
-          # Meeting 목록을 Issue Number 기준 내림차순 정렬
+          # Issue 번호 기준 내림차순
           # --------------------------------------------------
 
-          lines = content.splitlines()
-
-          meeting_links = []
-          other_lines = []
-
-          for line in lines:
-              match = re.match(
-                  r"- \[#(\d+) (.*?)\]\(Meeting-Notes/(.*?)\)",
-                  line
-              )
-
-              if match:
-                  meeting_links.append(
-                      (int(match.group(1)), line)
-                  )
-              else:
-                  other_lines.append(line)
-
-          meeting_links.sort(
+          sorted_meetings = sorted(
+              meetings.items(),
               key=lambda x: x[0],
               reverse=True
           )
 
+          meeting_lines = [
+              line
+              for _, line in sorted_meetings
+          ] 
+     
+          meetings_section = (
+              "## Meetings\n\n"
+              + "\n".join(meeting_lines)
+              + "\n"
+          )
+
           # --------------------------------------------------
-          # Index 재구성
+          # 기존 ## Meetings 섹션이 있는지 확인
           # --------------------------------------------------
 
-          result = []
+          section_pattern = re.compile(
+              r"## Meetings\s*\n.*?(?=\n## |\Z)",
+              re.DOTALL
+          )
 
-          result.append("# Meeting Notes")
-          result.append("")
-          result.append("## Meetings")
-          result.append("")
-
-          for _, line in meeting_links:
-              result.append(line)
-
-          result.append("")
+          if section_pattern.search(content):
+              # 기존 Meetings 섹션만 교체
+              content = section_pattern.sub(
+                meetings_section.rstrip(),
+                content
+              )
+          else:
+              # Meetings 섹션이 없다면 마지막에 추가
+              content = content.rstrip() + "\n\n" + meetings_section
 
           with open(index_path, "w", encoding="utf-8") as file:
-              file.write("\n".join(result))
+              file.write(content)
 
           print("Meeting Notes index updated.")
           PY
